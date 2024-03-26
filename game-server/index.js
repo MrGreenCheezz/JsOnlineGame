@@ -34,6 +34,11 @@ io.on('connection', (socket) => {
         socket.emit('sendPlayersList', Object.fromEntries(players));
     })
 
+    socket.on('cmdPlayerFire', (data) =>{
+        let player = players.get(socket.id);
+        io.emit('rpcPlayerFire', {playerX : player.x, playerY : player.y, x : data.x, y : data.y, speed : data.speed, Owner: socket.id});
+    });
+
     socket.on('clientSendPlayerState',(data)=>{
         players.set(socket.id, {id: socket.id, x: data.x, y: data.y, direction: data.direction});
         socket.broadcast.emit('serverSendPlayerState', {id: socket.id, x: data.x, y: data.y, direction: data.direction})
