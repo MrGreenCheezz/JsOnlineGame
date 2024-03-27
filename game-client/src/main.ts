@@ -2,8 +2,10 @@ import "./style.css";
 import Phaser from "phaser";
 import { io, Socket } from "socket.io-client";
 import Bullet from "./BulletClass";
+import Player from "./Player";
 
 enum GameState {
+  START,
   GAME,
   RESPAWN,
   END_GAME
@@ -12,15 +14,15 @@ enum GameState {
 let socket: Socket | null = null;
 
 class MyGame extends Phaser.Scene {
-  localPlayer: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody | null;
+  localPlayer: Player | null;
   bulletsGroup: Phaser.Physics.Arcade.Group | undefined;
   playersGroup: Phaser.Physics.Arcade.Group | undefined;
-  Players: Map<string, Phaser.Types.Physics.Arcade.SpriteWithDynamicBody> =
+  Players: Map<string, Player> =
     new Map();
   cursors: Phaser.Types.Input.Keyboard.CursorKeys | null | undefined;
   playersLookDirection: { x: number; y: number } = { x: 0, y: 0 };
   playersLastLookDirection: { x: number; y: number } = { x: 0, y: 0 };
-  playersSpeed: number = 100;
+  playersSpeed: number = 250;
   constructor() {
     super("mygame");
     this.localPlayer = null;
@@ -28,6 +30,7 @@ class MyGame extends Phaser.Scene {
 
   preload() {
     this.load.image("player", "assets/player.png");
+    this.load.image("bullet", "assets/bullet.png");
   }
 
   create() {
@@ -39,10 +42,11 @@ class MyGame extends Phaser.Scene {
     });
 
     this.physics.add.overlap(this.playersGroup, this.bulletsGroup, (player, bullet) => {
-      if((bullet as Bullet).Owner !== socket?.id){
-        console.log(socket?.id);
-        console.log((bullet as Bullet).Owner);
-      bullet.destroy();
+      if((bullet as Bullet).Owner !== (player as Player).Owner){
+        bullet.destroy();
+        if((player as Player).Owner === socket?.id){
+          this.playerHurt(25);
+        }
       }
     });
     this.input.keyboard?.on('keydown', (event : any) => {
@@ -56,22 +60,18 @@ class MyGame extends Phaser.Scene {
       if ((this, this.localPlayer === null)) {
         socket?.emit("requestPlayersList");
       }
-      this.localPlayer = this.physics.add.sprite(data.x, data.y, "player");
-      this.localPlayer.setScale(0.1);
-      this.playersGroup?.add(this.localPlayer);
+      this.localPlayer = new Player(this, data.x, data.y, "player", socket?.id !== undefined ? socket?.id : "");
     });
 
     socket.on("newPlayerConnected", (data) => {
       if (data.id === socket?.id) {
         return;
       }
-      let tmpPlayer = this.physics.add.sprite(data.x, data.y, "player");
-        tmpPlayer.setScale(0.1);
+      let tmpPlayer = new Player(this, data.x, data.y, "player", data.id);
       this.Players.set(
         data.id,
         tmpPlayer
       );
-      this.playersGroup?.add(tmpPlayer);
     });
     socket.on("sendPlayersList", (data) => {
       let newData = new Map<string, { x: number; y: number }>(
@@ -81,13 +81,11 @@ class MyGame extends Phaser.Scene {
         if (key === socket?.id) {
           return;
         }
-        let tmpPlayer = this.physics.add.sprite(value.x, value.y, "player");
-        tmpPlayer.setScale(0.1);
+        let tmpPlayer = new Player(this, data.x, data.y, "player", data.id);
         this.Players.set(
           key,
           tmpPlayer
         );
-        this.playersGroup?.add(tmpPlayer);
       });
     });
 
@@ -114,6 +112,35 @@ class MyGame extends Phaser.Scene {
       bullet.fire(data.x, data.y, data.speed);
     });
 
+    socket.on('rpcPlayerDead', (data) => {
+      console.log("Player death");
+      if(data.id === socket?.id){
+        this.localPlayer?.destroy();
+        this.localPlayer = null;
+      }
+      else{
+        let tmpPlayer = this.Players.get(data.id);
+        if(tmpPlayer){
+          tmpPlayer.destroy();
+          this.Players.delete(data.id);
+        }
+      }
+    })
+    socket.on('rpcPlayerHurt', (data) =>{
+      console.log('Player hurt')
+      if(data.id === socket?.id){
+        if(this.localPlayer){
+          this.localPlayer.Health = data.Health;
+        }
+      }
+      else{
+        let tmpPlayer = this.Players.get(data.id);
+        if(tmpPlayer){
+          tmpPlayer.Health = data.Health;
+        }
+      }
+    })
+
     socket.on("playerDisconnected", (data) => {
       let tmpPlayer = this.Players.get(data);
       if(tmpPlayer){
@@ -128,6 +155,10 @@ class MyGame extends Phaser.Scene {
 
   playerFire(){
     socket?.emit("cmdPlayerFire", {x: this.playersLastLookDirection.x, y: -this.playersLastLookDirection.y, speed: 1000});
+  }
+
+  playerHurt(damage: number){
+    socket?.emit('cmdPlayerHurt', damage);
   }
 
   update(time: number, delta: number): void {
