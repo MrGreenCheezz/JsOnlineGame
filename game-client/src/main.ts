@@ -74,24 +74,24 @@ class MyGame extends Phaser.Scene {
       );
     });
     socket.on("sendPlayersList", (data) => {
-      let newData = new Map<string, { x: number; y: number }>(
+      let newData = new Map<string, { x: number; y: number; id: string}>(
         Object.entries(data)
       );
+      console.log(newData);
       newData.forEach((value, key) => {
-        if (key === socket?.id) {
-          return;
-        }
-        let tmpPlayer = new Player(this, data.x, data.y, "player", data.id);
+        if (key !== this.localPlayer?.Owner) { 
+        let tmpPlayer = new Player(this, value.x, value.y, "player", value.id);
         this.Players.set(
           key,
           tmpPlayer
         );
+        }
       });
     });
 
     socket.on('serverSendPlayerState', (data :  {id: string, x: number, y: number, direction: number}) => {
       if(this.Players.has(data.id)){
-        this.Players.get(data.id)?.setPosition(data.x, data.y);
+        this.Players.get(data.id)?.MovePlayer(data.x, data.y);
         this.Players.get(data.id)?.setRotation(data.direction);
       }
     });
@@ -108,8 +108,7 @@ class MyGame extends Phaser.Scene {
     }, 50);
 
     socket.on("rpcPlayerFire", (data) => {
-      let bullet = new Bullet(this, data.playerX, data.playerY, "bullet", data.Owner);
-      bullet.fire(data.x, data.y, data.speed);
+      new Bullet(this, data.playerX, data.playerY, "bullet", data.Owner).fire(data.x, data.y, data.speed);
     });
 
     socket.on('rpcPlayerDead', (data) => {
@@ -130,13 +129,13 @@ class MyGame extends Phaser.Scene {
       console.log('Player hurt')
       if(data.id === socket?.id){
         if(this.localPlayer){
-          this.localPlayer.Health = data.Health;
+          this.localPlayer.ChangeHealth(data.Health);
         }
       }
       else{
         let tmpPlayer = this.Players.get(data.id);
         if(tmpPlayer){
-          tmpPlayer.Health = data.Health;
+          tmpPlayer.ChangeHealth(data.Health);
         }
       }
     })
@@ -148,12 +147,14 @@ class MyGame extends Phaser.Scene {
       }
       console.log(data);
       this.Players.get(data)?.destroy();
+      this.Players.get(data)?.HealthBar?.destroy();
       this.Players.delete(data);
     });
 
   }
 
   playerFire(){
+    if(this.localPlayer !== null)
     socket?.emit("cmdPlayerFire", {x: this.playersLastLookDirection.x, y: -this.playersLastLookDirection.y, speed: 1000});
   }
 
@@ -163,6 +164,8 @@ class MyGame extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     this.localPlayer?.setVelocity(0);
+     
+    this.localPlayer?.AdjustHealthBarPosition();
 
     if (this.cursors?.left.isDown) {
       this.playersLookDirection.x = -1;

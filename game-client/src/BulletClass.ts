@@ -10,12 +10,13 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
     scene.add.existing(this);
     scene.physics.add.existing(this);
     scene.bulletsGroup?.add(this);
+    this.setActive(true);
+    this.setVisible(true);
     this.setScale(0.02);
  }
 
  fire(x: number, y: number, speed: number){
-     this.setActive(true);
-     this.setVisible(true);
+
      this.setVelocity(x * speed, y * speed);
      this.setRotation(Math.atan2(y,x) - 1.57);
  }
