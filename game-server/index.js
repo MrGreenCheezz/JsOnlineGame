@@ -44,7 +44,7 @@ io.on('connection', (socket) => {
                 players.delete(socket.id);
                 io.emit('rpcPlayerDead', {id: socket.id});
             }else{
-                io.emit('rpcPlayerHurt', {id: data.id, Health: hurtedPlayer.Health});
+                io.emit('rpcPlayerHurt', {Health: hurtedPlayer.Health, PlayerId: socket.id});
             }          
         }
     

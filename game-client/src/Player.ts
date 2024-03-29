@@ -5,6 +5,7 @@ import HealthBar from "./HpBar.ts";
 class Player extends Phaser.Physics.Arcade.Sprite
 {
  Owner : string = "";
+ public Nickname : string = "";
  public Health : number = 100;
  public HealthBar : HealthBar | undefined;
  constructor(scene: MyGame, x: number | undefined = 0, y: number | undefined = 0, texture: string, owner: string){  
