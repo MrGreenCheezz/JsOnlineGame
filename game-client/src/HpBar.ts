@@ -8,8 +8,9 @@ class HealthBar {
     private maxValue: number;
     private barWidth: number;
     private barHeight: number;
+    private playerName : Phaser.GameObjects.Text;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, maxValue: number, barWidth: number = 75, barHeight: number = 10) {
+    constructor(scene: Phaser.Scene, x: number, y: number, maxValue: number, barWidth: number = 75, barHeight: number = 10, name:string = "Player") {
         this.bar = scene.add.graphics();
         this.x = x;
         this.y = y;
@@ -17,7 +18,8 @@ class HealthBar {
         this.maxValue = maxValue;
         this.barWidth = barWidth;
         this.barHeight = barHeight;
-
+        this.playerName = scene.add.text(100, 100, name, { font: '16px Arial', color: '#ffffff' });
+        console.log(name);
         this.draw();
     }
 
@@ -57,10 +59,13 @@ class HealthBar {
     public Move(x: number, y: number){
         this.x = x;
         this.y = y;
+        this.playerName.x = this.x;
+        this.playerName.y = this.y-15;
         this.draw();
     }
 
     public destroy() {
+        this.playerName.destroy();
         this.bar.destroy();
     }
 }

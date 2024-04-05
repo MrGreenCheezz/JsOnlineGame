@@ -26,6 +26,7 @@ io.on('connection', (socket) => {
         x: Math.random() * 800,
         y: Math.random() * 600,
         direction: {x: 0, y: 0},
+        name: 'Player'
 
     };
     players.set(socket.id, player);
@@ -34,6 +35,12 @@ io.on('connection', (socket) => {
     // Обработка события, отправленного клиентом
     socket.on('requestPlayersList', () =>{
         socket.emit('sendPlayersList', Object.fromEntries(players));
+    })
+
+    socket.on('CMDSendName', (data)=>{
+        let player = players.get(socket.id);
+        player.name = data.name;
+        io.emit('RPCSendName', {id: socket.id, name: data.name});
     })
 
     socket.on('cmdPlayerHurt', (data) => {

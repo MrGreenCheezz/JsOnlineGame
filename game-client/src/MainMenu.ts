@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { MyGame } from "./main";
 
 
 class MainMenu {
@@ -8,9 +9,10 @@ class MainMenu {
     private menuContainer!: Phaser.GameObjects.Container;
     private isVisible: boolean = true;
     private inputBackground!: Phaser.GameObjects.Rectangle;
-    constructor(scene: Phaser.Scene) {
+    constructor(scene: MyGame) {
         const centerX = scene.cameras.main.width / 2;
         const centerY = scene.cameras.main.height / 2;
+        
 
 
        
@@ -23,7 +25,7 @@ class MainMenu {
         const buttonStyle = { font: '24px Arial', backgroundColor: '#000000', padding: { left: 10, right: 10, top: 10, bottom: 5 } };
         this.startButton = scene.add.text(centerX, centerY + 40, 'Старт', buttonStyle)
             .setOrigin(0.5, 0.5)
-            .setInteractive();
+            .setInteractive().setDepth(-5);
 
         // Создаем контейнер для меню и добавляем в него все элементы
         this.menuContainer = scene.add.container(0, 0);
@@ -32,7 +34,10 @@ class MainMenu {
         // Обработчик нажатия на кнопку старт
         this.startButton.on('pointerdown', () => {
             const playerName = (document.querySelector('input[name="name"]') as HTMLInputElement).value;
+            scene.ChangeGameState(2);
+            (document.querySelector('input[name="name"]') as HTMLInputElement).style.visibility = 'hidden';
             console.log('Игрок:', playerName);
+            
         });
 
     }
