@@ -8,6 +8,7 @@ import { MainMenu } from "./MainMenu";
 enum GameState {
   NONE,
   START,
+  WAITING,
   GAME,
   RESPAWN,
   END_GAME
@@ -16,9 +17,10 @@ enum GameState {
 let socket: Socket | null = null;
 
 class MyGame extends Phaser.Scene {
+
   public CurrentGameState: GameState = GameState.NONE;
-  mapWidth : number = 3000;
-  mapHeight : number = 2000;
+  mapWidth: number = 3000;
+  mapHeight: number = 2000;
   public LocalPlayerName: string = "";
   private MainMenu: MainMenu | null = null;
   localPlayer: Player | null;
@@ -56,7 +58,7 @@ class MyGame extends Phaser.Scene {
           if (data.id === socket?.id) {
             return;
           }
-          
+
           let tmpPlayer = new Player(this, data.x, data.y, "player", data.id);
           this.Players.set(
             data.id,
@@ -65,18 +67,18 @@ class MyGame extends Phaser.Scene {
         });
         socket?.on("RPCSendName", (data) => {
           if (data.id === socket?.id) {
-            if(this.localPlayer)
-            this.localPlayer.Nickname = data.name;
+            if (this.localPlayer)
+              this.localPlayer.Nickname = data.name;
             this.localPlayer?.createHealthBar();
           } else {
             let tmpPlayer = this.Players.get(data.id);
-            if(tmpPlayer)
+            if (tmpPlayer)
               tmpPlayer.Nickname = data.name;
-              tmpPlayer?.createHealthBar();
+            tmpPlayer?.createHealthBar();
           }
         });
         socket?.on("sendPlayersList", (data) => {
-          let newData = new Map<string, { x: number; y: number; id: string, name:string }>(
+          let newData = new Map<string, { x: number; y: number; id: string, name: string }>(
             Object.entries(data)
           );
 
@@ -92,7 +94,7 @@ class MyGame extends Phaser.Scene {
             }
           });
         });
-    
+
         socket?.on('serverSendPlayerState', (data: { id: string, x: number, y: number, direction: number }) => {
           if (this.Players.has(data.id)) {
             const player = this.Players.get(data.id);
@@ -108,9 +110,9 @@ class MyGame extends Phaser.Scene {
         socket?.on("rpcPlayerFire", (data) => {
           new Bullet(this, data.playerX, data.playerY, "bullet", data.Owner).fire(data.x, data.y, data.speed);
         });
-    
-        socket?.on('rpcPlayerDead', (data) => {
 
+        socket?.on('RPCPlayerDead', (data) => {
+          console.log('Player dead', data.id)
           if (data.id === socket?.id) {
             this.localPlayer?.destroy();
             this.localPlayer?.HealthBar?.destroy();
@@ -138,7 +140,24 @@ class MyGame extends Phaser.Scene {
             }
           }
         })
-    
+        socket?.on('RPCPlayerRespawn', (data) => {
+          if (data.id === socket?.id) {
+            this.localPlayer = new Player(this, data.x, data.y, "player", socket?.id !== undefined ? socket?.id : "");
+            this.localPlayer.Nickname = data.name;
+            this.localPlayer.createHealthBar();
+            this.cameras.main.startFollow(this.localPlayer, true);
+            this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
+            return;
+          }
+          let tmpPlayer = new Player(this, data.x, data.y, "player", data.id);
+          tmpPlayer.Nickname = data.name;
+          tmpPlayer.createHealthBar();
+          tmpPlayer.Owner = data.id;
+          this.Players.set(
+            data.id,
+            tmpPlayer
+          );
+        });
         socket?.on("playerDisconnected", (data) => {
           let tmpPlayer = this.Players.get(data);
           if (tmpPlayer) {
@@ -149,15 +168,15 @@ class MyGame extends Phaser.Scene {
           this.Players.get(data)?.HealthBar?.destroy();
           this.Players.delete(data);
         });
-        
+
         socket?.on("playerConnected", (data) => {
           if ((this, this.localPlayer === null)) {
-            socket?.emit("CMDSendName", {name: (document.querySelector('input[name="name"]') as HTMLInputElement).value});
+            socket?.emit("CMDSendName", { name: (document.querySelector('input[name="name"]') as HTMLInputElement).value });
             socket?.emit("requestPlayersList");
           }
           this.localPlayer = new Player(this, data.x, data.y, "player", socket?.id !== undefined ? socket?.id : "");
           this.cameras.main.startFollow(this.localPlayer, true);
-        this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
+          this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
         });
 
         break;
@@ -167,12 +186,12 @@ class MyGame extends Phaser.Scene {
 
   create() {
     this.ChangeGameState(GameState.START);
-    
-    this.physics.world.setBounds(0, 0, 3000, 2000); 
+
+    this.physics.world.setBounds(0, 0, 3000, 2000);
 
     const background = this.add.image(0, 0, 'background').setOrigin(0, 0).setDepth(-1);
-        background.displayWidth = this.mapWidth;
-        background.displayHeight = this.mapHeight;
+    background.displayWidth = this.mapWidth;
+    background.displayHeight = this.mapHeight;
     this.bulletsGroup = this.physics.add.group({
     });
 
@@ -221,6 +240,9 @@ class MyGame extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
+    if (this.CurrentGameState === GameState.WAITING) {
+      return;
+    }
     //Players movement
     this.Players.forEach((player, id) => {
       if (id !== socket?.id) {  // Пропустить локального игрока

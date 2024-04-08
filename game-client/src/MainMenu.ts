@@ -34,7 +34,7 @@ class MainMenu {
         // Обработчик нажатия на кнопку старт
         this.startButton.on('pointerdown', () => {
             const playerName = (document.querySelector('input[name="name"]') as HTMLInputElement).value;
-            scene.ChangeGameState(2);
+            scene.ChangeGameState(3);
             (document.querySelector('input[name="name"]') as HTMLInputElement).style.visibility = 'hidden';
             console.log('Игрок:', playerName);
             

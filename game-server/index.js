@@ -7,6 +7,7 @@ const server = http.createServer((req, res) => {
 });
 
 let players = new Map();
+let playerRespawnTime = 5000;
 
 // Подключаем socket.io к серверу
 const io = socketIo(server,{
@@ -48,8 +49,17 @@ io.on('connection', (socket) => {
         if(hurtedPlayer){
             hurtedPlayer.Health -= data;
             if(hurtedPlayer.Health <= 0){
+                let tmpPlayer = hurtedPlayer;
+                io.emit('RPCPlayerDead', {id: socket.id});
                 players.delete(socket.id);
-                io.emit('rpcPlayerDead', {id: socket.id});
+                
+                setTimeout(() => {
+                    tmpPlayer.Health = 100;
+                    tmpPlayer.x = Math.random() * 800;
+                    tmpPlayer.y = Math.random() * 600;
+                    players.set(socket.id, tmpPlayer);
+                    io.emit('RPCPlayerRespawn', tmpPlayer);
+                }, playerRespawnTime);
             }else{
                 io.emit('rpcPlayerHurt', {Health: hurtedPlayer.Health, PlayerId: socket.id});
             }          
