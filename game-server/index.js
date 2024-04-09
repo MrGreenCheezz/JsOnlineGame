@@ -17,6 +17,8 @@ const io = socketIo(server,{
     }
 });
 
+let playersScores = new Map();
+
 // Обработка подключения нового клиента
 io.on('connection', (socket) => {
     console.log('Новое подключение:', socket.id);
@@ -41,13 +43,16 @@ io.on('connection', (socket) => {
     socket.on('CMDSendName', (data)=>{
         let player = players.get(socket.id);
         player.name = data.name;
+        if(!playersScores.has(data.name)){
+            playersScores.set(data.name, 0);
+        }
         io.emit('RPCSendName', {id: socket.id, name: data.name});
     })
 
     socket.on('cmdPlayerHurt', (data) => {
         let hurtedPlayer = players.get(socket.id);
         if(hurtedPlayer){
-            hurtedPlayer.Health -= data;
+            hurtedPlayer.Health -= data.damageAmount;
             if(hurtedPlayer.Health <= 0){
                 let tmpPlayer = hurtedPlayer;
                 io.emit('RPCPlayerDead', {id: socket.id});

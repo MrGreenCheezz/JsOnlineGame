@@ -185,6 +185,7 @@ class MyGame extends Phaser.Scene {
   }
 
   create() {
+
     this.ChangeGameState(GameState.START);
 
     this.physics.world.setBounds(0, 0, 3000, 2000);
@@ -202,7 +203,7 @@ class MyGame extends Phaser.Scene {
       if ((bullet as Bullet).Owner !== (player as Player).Owner) {
         bullet.destroy();
         if ((player as Player).Owner === socket?.id) {
-          this.playerHurt(25);
+          this.playerHurt(25, (bullet as Bullet).Owner);
         }
       }
     });
@@ -235,8 +236,8 @@ class MyGame extends Phaser.Scene {
       socket?.emit("cmdPlayerFire", { x: this.playersLastLookDirection.x, y: -this.playersLastLookDirection.y, speed: 1000 });
   }
 
-  playerHurt(damage: number) {
-    socket?.emit('cmdPlayerHurt', damage);
+  playerHurt(damage: number, damageDealer: string) {
+    socket?.emit('cmdPlayerHurt', {damageAmount: damage, dealer: damageDealer});
   }
 
   update(time: number, delta: number): void {
@@ -262,7 +263,7 @@ class MyGame extends Phaser.Scene {
 
     this.localPlayer?.setVelocity(0);
 
-    this.localPlayer?.AdjustHealthBarPosition();
+    
 
     if (this.cursors?.left.isDown) {
       this.playersLookDirection.x = -1;
@@ -287,6 +288,10 @@ class MyGame extends Phaser.Scene {
       this.playersLastLookDirection = { ...this.playersLookDirection };
       this.localPlayer?.setRotation(Math.atan2(this.playersLookDirection.x, this.playersLookDirection.y));
     }
+ 
+ 
+    
+    this.localPlayer?.AdjustHealthBarPosition();
 
   }
 

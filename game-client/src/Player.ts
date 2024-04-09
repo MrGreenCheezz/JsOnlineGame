@@ -19,7 +19,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
     this.targetY = y;
     this.Owner = owner;
     scene.add.existing(this);
-    this.setScale(0.1);
+    this.setScale(0.2);
     //scene.physics.add.existing(this);
     scene.playersGroup?.add(this);
     this.setCollideWorldBounds(true);
@@ -40,7 +40,9 @@ class Player extends Phaser.Physics.Arcade.Sprite
    MovePlayer(x: number, y: number){
       this.x = x;
       this.y = y;
-      this.AdjustHealthBarPosition();
+      if(this.HealthBar){
+         this.HealthBar.Move(x - 37, y - 40);
+      }
    }
 
    ChangeHealth(amount: number){
