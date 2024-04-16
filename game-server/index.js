@@ -1,3 +1,4 @@
+const { Console } = require('console');
 const http = require('http');
 const socketIo = require('socket.io');
 
@@ -34,6 +35,7 @@ io.on('connection', (socket) => {
     };
     players.set(socket.id, player);
     socket.emit('playerConnected', player);
+    socket.emit('RPCSendScores',  Object.fromEntries(playersScores));
     socket.broadcast.emit('newPlayerConnected', player);
     // Обработка события, отправленного клиентом
     socket.on('requestPlayersList', () =>{
@@ -47,6 +49,7 @@ io.on('connection', (socket) => {
             playersScores.set(data.name, 0);
         }
         io.emit('RPCSendName', {id: socket.id, name: data.name});
+        console.log(playersScores);
     })
 
     socket.on('cmdPlayerHurt', (data) => {
@@ -56,6 +59,11 @@ io.on('connection', (socket) => {
             if(hurtedPlayer.Health <= 0){
                 let tmpPlayer = hurtedPlayer;
                 io.emit('RPCPlayerDead', {id: socket.id});
+                if(playersScores.get(players.get(data.dealer).name) !== undefined){
+                    playersScores.set(players.get(data.dealer).name, playersScores.get(players.get(data.dealer).name) + 1);
+                }
+                console.log(playersScores.get(players.get(data.dealer).name));
+                socket.emit("RPCChangePlayerScore",{name: players.get(data.dealer).name, score: playersScores.get(players.get(data.dealer).name)})
                 players.delete(socket.id);
                 
                 setTimeout(() => {

@@ -28,6 +28,7 @@ class MyGame extends Phaser.Scene {
   playersGroup: Phaser.Physics.Arcade.Group | undefined;
   Players: Map<string, Player> =
     new Map();
+  Scores : Map<string,integer> = new Map();
   cursors: Phaser.Types.Input.Keyboard.CursorKeys | null | undefined;
   playersLookDirection: { x: number; y: number } = { x: 0, y: 0 };
   playersLastLookDirection: { x: number; y: number } = { x: 0, y: 0 };
@@ -95,6 +96,15 @@ class MyGame extends Phaser.Scene {
           });
         });
 
+        socket?.on("RPCSendScores", (data) => {
+          let newData = new Map<string, integer>(
+            Object.entries(data)
+          );
+          newData.forEach((value, key) => {
+            this.Scores.set(key, value);
+          });
+        })
+
         socket?.on('serverSendPlayerState', (data: { id: string, x: number, y: number, direction: number }) => {
           if (this.Players.has(data.id)) {
             const player = this.Players.get(data.id);
@@ -106,6 +116,10 @@ class MyGame extends Phaser.Scene {
             }
           }
         });
+
+        socket?.on("RPCChangePlayerScore",(data)=>{
+          
+        })
 
         socket?.on("rpcPlayerFire", (data) => {
           new Bullet(this, data.playerX, data.playerY, "bullet", data.Owner).fire(data.x, data.y, data.speed);
